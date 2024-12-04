@@ -40,9 +40,9 @@ def max(x: float, y: float) -> float:
     return x if x > y else y
 
 
-def is_close(x: float, y: float) -> bool:
-    """Check if two float values are close to each other."""
-    return (x - y < 1e-2) and (y - x < 1e-2)
+def is_close(x: float, y: float) -> float:
+    """Check if two floats are close within a tolerance."""
+    return 1.0 if abs(x - y) < 1e-2 else 0.0
 
 
 def sigmoid(x: float) -> float:

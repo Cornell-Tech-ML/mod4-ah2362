@@ -8,6 +8,7 @@ from .tensor_functions import Function, rand
 
 max_reduce = FastOps.reduce(operators.max, float("-inf"))
 
+
 def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     """Reshape an image tensor for 2D pooling
 
@@ -28,7 +29,7 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
 
     new_height = height // kh
     new_width = width // kw
-    
+
     # Create a view of the input tensor with the tiled structure
     # Steps:
     # 1. Reshape to separate tiles in height dimension
@@ -37,7 +38,7 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     tiled = input.contiguous().view(batch, channel, new_height, kh, new_width, kw)
     tiled = tiled.permute(0, 1, 2, 4, 3, 5).contiguous()
     tiled = tiled.view(batch, channel, new_height, new_width, kh * kw)
-    
+
     return tiled, new_height, new_width
 
 
@@ -53,6 +54,7 @@ def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     -------
         Tensor of shape batch x channel x new_height x new_width
         where new_height and new_width are determined by the kernel size
+
     """
     tiled, new_height, new_width = tile(input, kernel)
     pooled = tiled.mean(dim=4)
@@ -70,6 +72,7 @@ def argmax(input: Tensor, dim: int) -> Tensor:
     Returns:
     -------
         A 1-hot tensor with the same shape as `input` where the max indices are set to 1.
+
     """
     max_values = max_reduce(input, dim)
     return max_values == input
@@ -89,6 +92,7 @@ class Max(Function):
         Returns:
         -------
             Tensor containing the max values along the specified dimension.
+
         """
         # Convert dim to int safely
         if isinstance(dim, Tensor):
@@ -123,6 +127,7 @@ def softmax(input: Tensor, dim: int) -> Tensor:
     Returns:
     -------
         softmax tensor
+
     """
     exps = input.exp()
     sum_exps = exps.sum(dim)
@@ -144,6 +149,7 @@ def logsoftmax(input: Tensor, dim: int) -> Tensor:
     Returns:
     -------
         log-softmax tensor
+
     """
     softmax_tensor = softmax(input, dim)
     return softmax_tensor.log()
@@ -163,6 +169,7 @@ def maxpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
     -------
         Tensor
             Pooled tensor with shape (batch, channel, new_height, new_width).
+
     """
     batch, channel, height, width = input.shape
     kh, kw = kernel
@@ -194,6 +201,7 @@ def dropout(input: Tensor, rate: float, ignore: bool = False) -> Tensor:
     Returns:
     -------
         tensor with random positions dropped
+
     """
     if ignore or rate <= 0.0:
         return input
