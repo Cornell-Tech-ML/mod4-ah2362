@@ -5,6 +5,17 @@ from typing import List, Tuple
 
 
 def make_pts(N: int) -> List[Tuple[float, float]]:
+    """Generates a list of N random 2D points within the unit square [0, 1) x [0, 1).
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    List[Tuple[float, float]]: A list of N tuples, each representing a 2D point (x, y) with x and y being random floats between 0 and 1.
+
+    """
     X = []
     for i in range(N):
         x_1 = random.random()
@@ -21,6 +32,17 @@ class Graph:
 
 
 def simple(N: int) -> Graph:
+    """Generates a simple dataset with N points, where each point is classified based on its x-coordinate.
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    Graph: A Graph object containing N points and their corresponding labels. Points with x-coordinate less than 0.5 are labeled as 1, otherwise as 0.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -30,6 +52,17 @@ def simple(N: int) -> Graph:
 
 
 def diag(N: int) -> Graph:
+    """Generates a dataset with N points, where each point is classified based on its position relative to the diagonal of the unit square [0, 1) x [0, 1).
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    Graph: A Graph object containing N points and their corresponding labels. Points below the diagonal (x + y < 0.5) are labeled as 1, otherwise as 0.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -39,6 +72,17 @@ def diag(N: int) -> Graph:
 
 
 def split(N: int) -> Graph:
+    """Generates a dataset with N points, where each point is classified based on its x-coordinate.
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    Graph: A Graph object containing N points and their corresponding labels. Points with x-coordinate less than 0.2 or greater than 0.8 are labeled as 1, otherwise as 0.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -48,6 +92,17 @@ def split(N: int) -> Graph:
 
 
 def xor(N: int) -> Graph:
+    """Generates a dataset with N points, where each point is classified based on its position relative to the diagonal of the unit square [0, 1) x [0, 1).
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    Graph: A Graph object containing N points and their corresponding labels. Points with x-coordinate less than 0.5 and y-coordinate greater than 0.5, or vice versa, are labeled as 1, otherwise as 0.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -57,6 +112,17 @@ def xor(N: int) -> Graph:
 
 
 def circle(N: int) -> Graph:
+    """Generates a dataset with N points, where each point is classified based on its position relative to the unit circle.
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    Graph: A Graph object containing N points and their corresponding labels. Points inside the unit circle are labeled as 1, otherwise as 0.
+
+    """
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -67,6 +133,18 @@ def circle(N: int) -> Graph:
 
 
 def spiral(N: int) -> Graph:
+    """Generates a dataset with N points, where each point is classified based on its position relative to a spiral.
+
+    Args:
+    ----
+    N (int): The number of points to generate.
+
+    Returns:
+    -------
+    Graph: A Graph object containing N points and their corresponding labels. Points on the spiral are labeled as 1, otherwise as 0.
+
+    """
+
     def x(t: float) -> float:
         return t * math.cos(t) / 20.0
 

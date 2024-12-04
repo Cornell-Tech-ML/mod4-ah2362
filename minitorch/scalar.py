@@ -112,21 +112,47 @@ class Scalar:
         return self.history is not None and self.history.last_fn is None
 
     def is_constant(self) -> bool:
+        """Checks if the scalar is a constant.
+
+        Returns
+        -------
+            bool: True if the scalar is a constant, False otherwise.
+
+        """
         return self.history is None
 
     @property
     def parents(self) -> Iterable[Variable]:
-        """Get the variables used to create this one."""
+        """Returns the input variables of the current variable's history.
+
+        Returns
+        -------
+            Iterable[Variable]: The input variables of the current variable's history.
+
+        """
         assert self.history is not None
         return self.history.inputs
 
     def chain_rule(self, d_output: Any) -> Iterable[Tuple[Variable, Any]]:
+        """Computes the chain rule for the current variable.
+
+        This method computes the local derivatives using the backward function and pairs them with the corresponding input variables.
+
+        Args:
+        ----
+            d_output: The derivative of the output with respect to the current variable.
+
+        Returns:
+        -------
+            Iterable[Tuple[Variable, Any]]: An iterable containing tuples of input variables and their local derivatives.
+
+        """
         h = self.history
         assert h is not None
         assert h.last_fn is not None
         assert h.ctx is not None
-
-        raise NotImplementedError("Need to include this file from past assignment.")
+        x = h.last_fn._backward(h.ctx, d_output)
+        return list(zip(h.inputs, x))
 
     def backward(self, d_output: Optional[float] = None) -> None:
         """Calls autodiff to fill in the derivatives for the history of this object.
@@ -141,17 +167,140 @@ class Scalar:
             d_output = 1.0
         backpropagate(self, d_output)
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    def __lt__(self, b: ScalarLike) -> Scalar:
+        """Less than comparison operator.
+
+        Args:
+        ----
+            b (ScalarLike): The scalar to compare with.
+
+        Returns:
+        -------
+            Scalar: The result of the comparison.
+
+        """
+        return LT.apply(self, b)
+
+    def __gt__(self, b: ScalarLike) -> Scalar:
+        """Greater than comparison operator.
+
+        Args:
+        ----
+            b (ScalarLike): The scalar to compare with.
+
+        Returns:
+        -------
+            Scalar: The result of the comparison.
+
+        """
+        return LT.apply(b, self)
+
+    def __sub__(self, b: ScalarLike) -> Scalar:
+        """Subtraction operator.
+
+        Args:
+        ----
+            b (ScalarLike): The scalar to subtract.
+
+        Returns:
+        -------
+            Scalar: The result of the subtraction.
+
+        """
+        return Add.apply(self, Neg.apply(b))
+
+    def __neg__(self) -> Scalar:
+        """Negation operator.
+
+        Returns
+        -------
+            Scalar: The negation of the scalar.
+
+        """
+        return Neg.apply(self)
+
+    def __add__(self, b: ScalarLike) -> Scalar:
+        """Addition operator.
+
+        Args:
+        ----
+            b (ScalarLike): The scalar to add.
+
+        Returns:
+        -------
+            Scalar: The result of the addition.
+
+        """
+        return Add.apply(self, b)
+
+    def log(self) -> Scalar:
+        """Natural logarithm function.
+
+        Returns
+        -------
+            Scalar: The natural logarithm of the scalar.
+
+        """
+        return Log.apply(self)
+
+    def exp(self) -> Scalar:
+        """Exponential function.
+
+        Returns
+        -------
+            Scalar: The exponential of the scalar.
+
+        """
+        return Exp.apply(self)
+
+    def sigmoid(self) -> Scalar:
+        """Sigmoid function.
+
+        Returns
+        -------
+            Scalar: The sigmoid of the scalar.
+
+        """
+        return Sigmoid.apply(self)
+
+    def relu(self) -> Scalar:
+        """ReLU function.
+
+        Returns
+        -------
+            Scalar: The ReLU of the scalar.
+
+        """
+        return ReLU.apply(self)
+
+    def __eq__(self, b: ScalarLike) -> Scalar:
+        """Equality comparison operator.
+
+        Args:
+        ----
+            b (ScalarLike): The scalar to compare with.
+
+        Returns:
+        -------
+            Scalar: The result of the comparison.
+
+        """
+        return EQ.apply(self, b)
 
 
 def derivative_check(f: Any, *scalars: Scalar) -> None:
-    """Checks that autodiff works on a python function.
-    Asserts False if derivative is incorrect.
+    """Checks the derivative of a function `f` at the given `scalars`.
 
-    Parameters
-    ----------
-        f : function from n-scalars to 1-scalar.
-        *scalars  : n input scalar values.
+    This function computes the derivative of `f` at the given `scalars` using central difference and compares it with the derivative computed using backpropagation. It asserts that the two derivatives are close within a certain tolerance.
+
+    Args:
+    ----
+        f (Any): The function to check the derivative of.
+        scalars (Scalar): The scalars at which to check the derivative.
+
+    Returns:
+    -------
+        None
 
     """
     out = f(*scalars)
