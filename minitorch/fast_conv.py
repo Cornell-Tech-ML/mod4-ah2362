@@ -99,8 +99,8 @@ def _tensor_conv1d(
                     w * out_strides[2]
                 )
                 
-                # Initialize output
-                out[out_pos] = 0.0
+                # Initialize accumulator
+                acc = 0.0
                 
                 # For each input channel
                 for ic in range(in_channels):
@@ -122,10 +122,15 @@ def _tensor_conv1d(
                             k * weight_strides[2]
                         )
                         
-                        # Accumulate product
-                        out[out_pos] += input[in_pos] * weight[weight_pos]
+                        # Add bounds check
+                        if out_pos < len(out) and in_pos < len(input) and weight_pos < len(weight):
+                            acc += input[in_pos] * weight[weight_pos]
+                
+                # Store final result
+                if out_pos < len(out):
+                    out[out_pos] = acc
 
-tensor_conv1d = njit(_tensor_conv1d, parallel=True)
+tensor_conv1d = njit(_tensor_conv1d, parallel=False, fastmath=False, cache=True)
 
 
 class Conv1dFun(Function):
@@ -234,7 +239,7 @@ def _tensor_conv2d(
         reverse (bool): anchor weight at top-left or bottom-right
 
     """
-    batch_, out_channels, _, _ = out_shape
+    batch_, out_channels, height, width = out_shape
     batch, in_channels, height, width = input_shape
     out_channels_, in_channels_, kh, kw = weight_shape
 
@@ -246,15 +251,58 @@ def _tensor_conv2d(
 
     s1 = input_strides
     s2 = weight_strides
-    # inners
-    s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
-    s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
-    # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    # For each output position
+    for b in range(batch):
+        for oc in range(out_channels):
+            for h in range(height):
+                for w in range(width):
+                    # Calculate output index
+                    out_pos = (
+                        b * out_strides[0] + 
+                        oc * out_strides[1] + 
+                        h * out_strides[2] + 
+                        w * out_strides[3]
+                    )
+                    
+                    # Initialize accumulator
+                    acc = 0.0
+                    
+                    # For each input channel
+                    for ic in range(in_channels):
+                        # For each weight position
+                        for kh_idx in range(kh):
+                            for kw_idx in range(kw):
+                                h_p = h + (kh_idx if not reverse else -kh_idx)
+                                w_p = w + (kw_idx if not reverse else -kw_idx)
+                                
+                                if h_p < 0 or h_p >= height or w_p < 0 or w_p >= width:
+                                    continue
+                                
+                                # Calculate input and weight positions
+                                in_pos = (
+                                    b * s1[0] + 
+                                    ic * s1[1] + 
+                                    h_p * s1[2] + 
+                                    w_p * s1[3]
+                                )
+                                
+                                weight_pos = (
+                                    oc * s2[0] + 
+                                    ic * s2[1] + 
+                                    kh_idx * s2[2] + 
+                                    kw_idx * s2[3]
+                                )
+                                
+                                # Add bounds check
+                                if out_pos < len(out) and in_pos < len(input) and weight_pos < len(weight):
+                                    acc += input[in_pos] * weight[weight_pos]
+                    
+                    # Store final result
+                    if out_pos < len(out):
+                        out[out_pos] = acc
 
-
-tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
+tensor_conv2d = njit(_tensor_conv2d, parallel=False, fastmath=False, cache=True)
 
 
 class Conv2dFun(Function):
