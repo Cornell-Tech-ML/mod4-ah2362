@@ -1,4 +1,5 @@
 import random
+import os
 
 import embeddings
 
@@ -21,10 +22,12 @@ class Linear(minitorch.Module):
         self.out_size = out_size
 
     def forward(self, x):
-        batch, in_size = x.shape
-        return (
-            x.view(batch, in_size) @ self.weights.value.view(in_size, self.out_size)
-        ).view(batch, self.out_size) + self.bias.value
+        batch = x.shape[:-1]
+        in_size = x.shape[-1]
+
+        x_flat = x.view(-1, in_size)
+        out = (x_flat @ self.weights.value.view(in_size, self.out_size)) + self.bias.value
+        return out.view(*batch, self.out_size)
 
 
 class Conv1d(minitorch.Module):
@@ -34,8 +37,7 @@ class Conv1d(minitorch.Module):
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        return minitorch.conv1d(input, self.weights.value) + self.bias.value
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -61,15 +63,42 @@ class CNNSentimentKim(minitorch.Module):
     ):
         super().__init__()
         self.feature_map_size = feature_map_size
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        self.dropout = dropout
+
+        # Create parallel convolutional layers for each filter size
+        self.layer1 = Conv1d(embedding_size, feature_map_size, filter_sizes[0])
+        self.layer2 = Conv1d(embedding_size, feature_map_size, filter_sizes[1])
+        self.layer3 = Conv1d(embedding_size, feature_map_size, filter_sizes[2])
+
+        # Linear layer for classification
+        total_features = feature_map_size * len(filter_sizes)
+        self.linear = Linear(total_features, 1)
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Reshape input for convolution (batch, embedding_dim, sentence_length)
+        x = embeddings.permute(0, 2, 1)
+
+        # Apply convolutions and max-pool
+        c1 = self.layer1.forward(x).relu()
+        c2 = self.layer2.forward(x).relu()
+        c3 = self.layer3.forward(x).relu()
+
+        # Max over time pooling
+        f1 = minitorch.nn.max(c1, 2)
+        f2 = minitorch.nn.max(c2, 2)
+        f3 = minitorch.nn.max(c3, 2)
+
+        # Concatenate features
+        features = minitorch.cat([f1, f2, f3], dim=1)
+
+        # Apply dropout
+        features = minitorch.nn.dropout(features, self.dropout, not self.training)
+
+        # Linear layer and sigmoid
+        return self.linear.forward(features).sigmoid().view(x.shape[0])
 
 
 # Evaluation helper methods
@@ -109,10 +138,23 @@ def default_log_fn(
     best_val = (
         best_val if best_val > validation_accuracy[-1] else validation_accuracy[-1]
     )
-    print(f"Epoch {epoch}, loss {train_loss}, train accuracy: {train_accuracy[-1]:.2%}")
+
+    # Create log message
+    log_msg = f"Epoch {epoch}, loss {train_loss}, train accuracy: {train_accuracy[-1]:.2%}"
     if len(validation_predictions) > 0:
-        print(f"Validation accuracy: {validation_accuracy[-1]:.2%}")
-        print(f"Best Valid accuracy: {best_val:.2%}")
+        log_msg += f"\nValidation accuracy: {validation_accuracy[-1]:.2%}"
+        log_msg += f"\nBest Valid accuracy: {best_val:.2%}"
+
+    # Print to console
+    print(log_msg)
+
+    # Write to log file
+    log_dir = "logs"
+    os.makedirs(log_dir, exist_ok=True)
+    log_file = os.path.join(log_dir, "sentiment_training.log")
+
+    with open(log_file, "a") as f:
+        f.write(log_msg + "\n")
 
 
 class SentenceSentimentTrain:
