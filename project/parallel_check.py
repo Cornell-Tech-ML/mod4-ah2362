@@ -1,5 +1,11 @@
-from numba import njit
+# Uncomment these lines to add the parent directory to Python path
+import os
+import sys
+os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.getcwd())
 
+# Rest of imports
+from numba import njit
 import minitorch
 import minitorch.fast_ops
 

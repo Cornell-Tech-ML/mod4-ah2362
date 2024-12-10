@@ -1,8 +1,20 @@
-from mnist import MNIST
+import os
+import urllib.request
+import gzip
+import sys
 
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+from mnist import MNIST
 import minitorch
 
-mndata = MNIST("project/data/")
+# Add this at the top of the file with other global variables
+best_valid_acc = 0.0
+
+
+data_path = "/Users/arjunhegde/Library/CloudStorage/OneDrive-CornellUniversity/College/5. Cornell Tech (MEng)/CS5781 - Machine Learning Engineering/Repos/mod4-ah2362/project/data"
+mndata = MNIST(data_path)
 images, labels = mndata.load_training()
 
 BACKEND = minitorch.TensorBackend(minitorch.FastOps)
@@ -41,8 +53,8 @@ class Conv2d(minitorch.Module):
         self.bias = RParam(out_channels, 1, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Implement 2D convolution using minitorch's conv2d function
+        return minitorch.conv2d(input, self.weights.value) + self.bias.value
 
 
 class Network(minitorch.Module):
@@ -63,16 +75,50 @@ class Network(minitorch.Module):
     def __init__(self):
         super().__init__()
 
+        # First conv layer: 1 input channel -> 4 output channels
+        self.conv1 = Conv2d(1, 4, 3, 3)
+
+        # Second conv layer: 4 input channels -> 8 output channels
+        self.conv2 = Conv2d(4, 8, 3, 3)
+
+        # Linear layers
+        self.linear1 = Linear(392, 64)  # 392 = 8 * 7 * 7 after pooling
+        self.linear2 = Linear(64, C)
+
         # For vis
         self.mid = None
         self.out = None
 
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
-
     def forward(self, x):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # First conv + ReLU
+        self.mid = self.conv1.forward(x)
+        self.mid = self.mid.relu()
+
+        # Second conv + ReLU
+        self.out = self.conv2.forward(self.mid)
+        self.out = self.out.relu()
+
+        # Max pooling with 4x4 kernel
+        batch_size = self.out.shape[0]
+        channels = self.out.shape[1]
+        h = self.out.shape[2]
+        w = self.out.shape[3]
+
+        # Reshape for pooling
+        pooled = self.out.view(batch_size, channels, h//4, 4, w//4, 4)
+        pooled = minitorch.nn.max(pooled, 3)
+        pooled = minitorch.nn.max(pooled, 4)
+
+        # Flatten
+        flattened = pooled.view(batch_size, 392)
+
+        # First linear + ReLU + Dropout
+        hidden = self.linear1.forward(flattened).relu()
+        hidden = minitorch.nn.dropout(hidden, 0.25, not self.training)
+
+        # Final linear + LogSoftmax
+        logits = self.linear2.forward(hidden)
+        return minitorch.nn.logsoftmax(logits, 1)
 
 
 def make_mnist(start, stop):
