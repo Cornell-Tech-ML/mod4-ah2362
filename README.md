@@ -18,6 +18,8 @@ pip install python-mnist
 mnist_get_data.sh
 ```
 
+4.5 LOG LINKS:
+[mnist.txt](mnist.txt) | [sentiment.txt](sentiment.txt)
 
 * Tests:
 
